@@ -13,21 +13,24 @@ namespace DotDoc.LocalIpc
 {
     public class LocalIpcServer : LocalIpcBase
     {
-        public static async Task<LocalIpcServer> CreateAsync(Func<string, string, object> launchClient, ISerializer serializer = null, CancellationToken cancellationToken = default)
+        public delegate object LaunchClientFuncDelegate(string sendPipeHandle, string receivePipeHandle, params object[] launchArgs);
+        public delegate void LaunchClientActionDelegate(string sendPipeHandle, string receivePipeHandle, params object[] launchArgs);
+
+        public static async Task<LocalIpcServer> CreateAsync(LaunchClientFuncDelegate launchClient, ISerializer serializer = null, CancellationToken cancellationToken = default, params object[] launchArgs)
         {
             AnonymousPipeServerStream sendPipe = new (PipeDirection.Out, HandleInheritability.Inheritable);
             AnonymousPipeServerStream receivePipe = new (PipeDirection.In, HandleInheritability.Inheritable);
 
-            // Create an instance of LocalIpcServer and call the method to launch the client. 
-            // This returns a piece of data which can be used as a handle to the client.
+            // Create an instance of LocalIpcServer and then call the method to launch the client. 
+            // This returns a value which can be used as a handle to the client.
             LocalIpcServer localIpcServer = new(sendPipe, receivePipe, serializer)
             {
-                ClientHandle = launchClient(sendPipe.GetClientHandleAsString(), receivePipe.GetClientHandleAsString())
+                ClientHandle = launchClient(sendPipe.GetClientHandleAsString(), receivePipe.GetClientHandleAsString(), launchArgs)
             };
 
             // Wait for the client to send back its process id. 
             // If it is running on a different process to the server then dispose of the local copy of the client handles.
-            // We need to do this, as if the handles are left open then the server cannot tell if the client has closed the pipe unexpectedly.
+            // If the handles are not disposed then the server cannot track if the client has closed the pipe unexpectedly.
             int clientProcessId = await localIpcServer.ReceiveAsync<int>(cancellationToken);
 
             if (clientProcessId != Environment.ProcessId)
@@ -39,14 +42,12 @@ namespace DotDoc.LocalIpc
             return localIpcServer;
         }
 
-        public static Task<LocalIpcServer> CreateAsync(Action<string, string> launchClient, ISerializer serializer = null, CancellationToken cancellationToken = default)
-        {
-            return CreateAsync((c, s) =>
+        public static Task<LocalIpcServer> CreateAsync(LaunchClientActionDelegate launchClient, ISerializer serializer = null, CancellationToken cancellationToken = default, params object[] launchArgs) =>
+            CreateAsync((sendPipeHandle, receivePipeHandle, launchArgs) =>
             {
-                launchClient(c, s);
+                launchClient(sendPipeHandle, receivePipeHandle, launchArgs);
                 return null;
-            }, serializer, cancellationToken);
-        }
+            }, serializer, cancellationToken, launchArgs);
 
         private LocalIpcServer(AnonymousPipeServerStream sendPipe, AnonymousPipeServerStream receivePipe, ISerializer serializer)
             : base(sendPipe, receivePipe, serializer)

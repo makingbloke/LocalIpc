@@ -24,12 +24,8 @@ namespace DotDoc.LocalIpc
 
         private const string PipeBrokenMessage = "Pipe is broken.";         // message returned in IOException when pipe is broken.
 
-        protected LocalIpcBase(PipeStream sendPipeStream, PipeStream receivePipeStream, ISerializer serializer)
-        {
-            _sendPipeStream = sendPipeStream;
-            _receivePipeStream = receivePipeStream;
-            _serializer = serializer ?? new DefaultSerializer();
-        }
+        protected LocalIpcBase(PipeStream sendPipeStream, PipeStream receivePipeStream, ISerializer serializer) =>
+            (_sendPipeStream, _receivePipeStream, _serializer) = (sendPipeStream, receivePipeStream, serializer ?? new DefaultSerializer());
 
         ~LocalIpcBase()
         {

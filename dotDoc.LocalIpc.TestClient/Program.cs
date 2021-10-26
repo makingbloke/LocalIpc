@@ -1,6 +1,4 @@
 ﻿using DotDoc.LocalIpc;
-using System;
-using System.IO;
 using System.Threading.Tasks;
 
 namespace IPCClient
