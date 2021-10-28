@@ -58,7 +58,7 @@ namespace DotDoc.LocalIpc
                             {
                                 try
                                 {
-                                    object value = await ReceiveAsync(_cancellationTokenSource.Token);
+                                    object value = await ReceiveAsync(_cancellationTokenSource.Token).ConfigureAwait(false);
                                     Received?.Invoke(this, new ReceivedEventArgs(value));
                                 }
                                 catch (TaskCanceledException)
@@ -84,8 +84,8 @@ namespace DotDoc.LocalIpc
             byte[] valueBytes = _serializer.Serialize(value);
             byte[] lengthBytes = BitConverter.GetBytes(valueBytes.Length);
 
-            await WriteBytesAsync(lengthBytes, cancellationToken);
-            await WriteBytesAsync(valueBytes, cancellationToken);
+            await WriteBytesAsync(lengthBytes, cancellationToken).ConfigureAwait(false);
+            await WriteBytesAsync(valueBytes, cancellationToken).ConfigureAwait(false);
         }
 
         public Task<object> ReceiveAsync(CancellationToken cancellationToken = default) =>
@@ -93,10 +93,10 @@ namespace DotDoc.LocalIpc
 
         public async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken = default)        
         {
-            byte[] lengthBytes = await ReadBytesAsync(sizeof(int), cancellationToken);
+            byte[] lengthBytes = await ReadBytesAsync(sizeof(int), cancellationToken).ConfigureAwait(false);
             int length = BitConverter.ToInt32(lengthBytes);
 
-            byte[] valueBytes = await ReadBytesAsync(length, cancellationToken);
+            byte[] valueBytes = await ReadBytesAsync(length, cancellationToken).ConfigureAwait(false);
             T value = _serializer.Deserialize<T>(valueBytes);
             return value;
         }
@@ -125,7 +125,7 @@ namespace DotDoc.LocalIpc
             try
             {
                 byte[] bytes = new byte[length];
-                int bytesRead = await _receivePipeStream.ReadAsync(bytes.AsMemory(0, bytes.Length), cancellationToken);
+                int bytesRead = await _receivePipeStream.ReadAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);
 
                 if (bytesRead == 0) throw new PipeBrokenException();
                 if (bytesRead < bytes.Length) throw new EndOfStreamException("Unexpected end of stream on receive pipe.");
@@ -141,7 +141,7 @@ namespace DotDoc.LocalIpc
         {
             try
             {
-                await _sendPipeStream.WriteAsync(bytes.AsMemory(0, bytes.Length), cancellationToken);            
+                await _sendPipeStream.WriteAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);            
             }
             catch (IOException e) when (e.Message == PipeBrokenMessage)
             {

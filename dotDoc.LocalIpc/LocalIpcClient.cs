@@ -20,7 +20,7 @@ namespace DotDoc.LocalIpc
             LocalIpcClient localIpcClient = new (sendPipe, receivePipe, serializer);
 
             // Send back the process of the client so the server knows if it is running in a different process.
-            await localIpcClient.SendAsync(Environment.ProcessId, cancellationToken);
+            await localIpcClient.SendAsync(Environment.ProcessId, cancellationToken).ConfigureAwait(false);
 
             return localIpcClient;
         }

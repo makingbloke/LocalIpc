@@ -31,7 +31,7 @@ namespace DotDoc.LocalIpc
             // Wait for the client to send back its process id. 
             // If it is running on a different process to the server then dispose of the local copy of the client handles.
             // If the handles are not disposed then the server cannot track if the client has closed the pipe unexpectedly.
-            int clientProcessId = await localIpcServer.ReceiveAsync<int>(cancellationToken);
+            int clientProcessId = await localIpcServer.ReceiveAsync<int>(cancellationToken).ConfigureAwait(false);
 
             if (clientProcessId != Environment.ProcessId)
             {
