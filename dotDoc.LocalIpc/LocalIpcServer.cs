@@ -23,7 +23,7 @@ namespace DotDoc.LocalIpc
 
             // Create an instance of LocalIpcServer and then call the method to launch the client. 
             // This returns a value which can be used as a handle to the client.
-            LocalIpcServer localIpcServer = new(sendPipe, receivePipe, serializer)
+            LocalIpcServer localIpcServer = new (sendPipe, receivePipe, serializer)
             {
                 ClientHandle = launchClient(sendPipe.GetClientHandleAsString(), receivePipe.GetClientHandleAsString(), launchArgs)
             };

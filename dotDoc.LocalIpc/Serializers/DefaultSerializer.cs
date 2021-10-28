@@ -3,14 +3,13 @@
 // See the License.txt file in the solution root for more information.
 
 using Newtonsoft.Json;
-using System;
 using System.Text;
 
 namespace DotDoc.LocalIpc.Serializers
 {
     public class DefaultSerializer : ISerializer
     {
-        private static readonly JsonSerializerSettings settings = new()
+        private static readonly JsonSerializerSettings settings = new ()
         {
             TypeNameHandling = TypeNameHandling.All
         };

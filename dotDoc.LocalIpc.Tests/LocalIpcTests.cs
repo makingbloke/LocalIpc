@@ -46,7 +46,7 @@ namespace dotDoc.LocalIpc.Tests
         [TestMethod]
         public async Task TestSendReceiveObjectAsync()
         {
-            TestObject sendTestObject = new("Hello", 1);
+            TestObject sendTestObject = new ("Hello", 1);
 
             using LocalIpcServer localIpcServer = await LocalIpcServer.CreateAsync(LaunchInternalClient);
 
@@ -66,7 +66,7 @@ namespace dotDoc.LocalIpc.Tests
             const int receivedEventTimeout = 2000;
             const string sendText = "Hello";
             string receiveText = null;
-            TaskCompletionSource tcs = new();
+            TaskCompletionSource tcs = new ();
 
             using LocalIpcServer localIpcServer = await LocalIpcServer.CreateAsync(LaunchInternalClient);
             localIpcServer.EnableReceiveEvents = true;
@@ -95,9 +95,9 @@ namespace dotDoc.LocalIpc.Tests
         public async Task TestSendReceiveEventObjectAsync()
         {
             const int receivedEventTimeout = 2000;
-            TestObject sendTestClass = new("Hello", 1);
+            TestObject sendTestClass = new ("Hello", 1);
             TestObject receiveTestClass = null;
-            TaskCompletionSource tcs = new();
+            TaskCompletionSource tcs = new ();
 
             using LocalIpcServer localIpcServer = await LocalIpcServer.CreateAsync(LaunchInternalClient);
             localIpcServer.EnableReceiveEvents = true;
@@ -126,7 +126,7 @@ namespace dotDoc.LocalIpc.Tests
         public async Task TestDisposedEventAsync()
         {
             const int receivedEventTimeout = 2000;
-            TaskCompletionSource tcs = new();
+            TaskCompletionSource tcs = new ();
 
             using (LocalIpcServer localIpcServer = await LocalIpcServer.CreateAsync(LaunchInternalClient))
             {
@@ -149,7 +149,7 @@ namespace dotDoc.LocalIpc.Tests
         [TestMethod]
         public async Task TestCancelCreateClientAsync()
         {
-            CancellationTokenSource cancellationTokenSource = new();
+            CancellationTokenSource cancellationTokenSource = new ();
             cancellationTokenSource.Cancel();
 
             try
@@ -178,7 +178,7 @@ namespace dotDoc.LocalIpc.Tests
         [TestMethod]
         public async Task TestCancelCreateServerAsync()
         {
-            CancellationTokenSource cancellationTokenSource = new();
+            CancellationTokenSource cancellationTokenSource = new ();
             cancellationTokenSource.Cancel();
 
             await Assert.ThrowsExceptionAsync<TaskCanceledException>(async () =>
@@ -195,7 +195,7 @@ namespace dotDoc.LocalIpc.Tests
         public async Task TestCancelSendAsync()
         {
             const string sendText = "Hello";
-            CancellationTokenSource cancellationTokenSource = new();
+            CancellationTokenSource cancellationTokenSource = new ();
             cancellationTokenSource.Cancel();
 
             using LocalIpcServer localIpcServer = await LocalIpcServer.CreateAsync(LaunchInternalClient);
@@ -214,7 +214,7 @@ namespace dotDoc.LocalIpc.Tests
         public async Task TestCancelReceiveAsync()
         {
             const string sendText = "Hello";
-            CancellationTokenSource cancellationTokenSource = new();
+            CancellationTokenSource cancellationTokenSource = new ();
             cancellationTokenSource.Cancel();
 
             using LocalIpcServer localIpcServer = await LocalIpcServer.CreateAsync(LaunchInternalClient);
