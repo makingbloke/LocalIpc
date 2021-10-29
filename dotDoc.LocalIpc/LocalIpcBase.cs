@@ -50,7 +50,7 @@ namespace DotDoc.LocalIpc
             {
                 if (!IsInitialized)
                 {
-                    throw new LocalIpcNotInitialisedException();
+                    throw new LocalIpcNotInitializedException();
                 }
 
                 if (_isReceiveEventsEnabled != value)
@@ -91,7 +91,7 @@ namespace DotDoc.LocalIpc
         {
             if (!IsInitialized)
             {
-                throw new LocalIpcNotInitialisedException();
+                throw new LocalIpcNotInitializedException();
             }
 
             byte[] valueBytes = _serializer.Serialize(value);
@@ -108,7 +108,7 @@ namespace DotDoc.LocalIpc
         {
             if (!IsInitialized)
             {
-                throw new LocalIpcNotInitialisedException();
+                throw new LocalIpcNotInitializedException();
             }
 
             byte[] lengthBytes = await ReadBytesAsync(sizeof(int), cancellationToken).ConfigureAwait(false);

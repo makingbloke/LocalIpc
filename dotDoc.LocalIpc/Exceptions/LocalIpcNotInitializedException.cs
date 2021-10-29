@@ -8,23 +8,23 @@ using System.Runtime.Serialization;
 namespace DotDoc.LocalIpc.Exceptions
 {
     [Serializable]
-    public class LocalIpcNotInitialisedException : Exception
+    public class LocalIpcNotInitializedException : Exception
     {
-        public LocalIpcNotInitialisedException()
+        public LocalIpcNotInitializedException()
         {
         }
 
-        public LocalIpcNotInitialisedException(string message)
+        public LocalIpcNotInitializedException(string message)
             : base(message)
         {
         }
 
-        public LocalIpcNotInitialisedException(string message, Exception innerException)
+        public LocalIpcNotInitializedException(string message, Exception innerException)
             : base(message, innerException)
         {
         }
 
-        protected LocalIpcNotInitialisedException(SerializationInfo info, StreamingContext context)
+        protected LocalIpcNotInitializedException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }

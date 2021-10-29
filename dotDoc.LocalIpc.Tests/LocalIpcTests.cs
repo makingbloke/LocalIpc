@@ -33,7 +33,7 @@ namespace dotDoc.LocalIpc.Tests
 
             using LocalIpcServer localIpcServer = new ();
 
-            await Assert.ThrowsExceptionAsync<LocalIpcNotInitialisedException>(async () =>
+            await Assert.ThrowsExceptionAsync<LocalIpcNotInitializedException>(async () =>
             {
                 await localIpcServer.SendAsync(sendText).ConfigureAwait(false);
 
@@ -55,7 +55,7 @@ namespace dotDoc.LocalIpc.Tests
             {
                 using LocalIpcClient localIpcClient = new (localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
 
-                await Assert.ThrowsExceptionAsync<LocalIpcNotInitialisedException>(async () =>
+                await Assert.ThrowsExceptionAsync<LocalIpcNotInitializedException>(async () =>
                 {
                     await localIpcClient.SendAsync(sendText).ConfigureAwait(false);
 
