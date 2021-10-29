@@ -12,22 +12,22 @@ namespace DotDoc.LocalIpc
 {
     public class LocalIpcClient: LocalIpcBase
     {
-        public static async Task<LocalIpcClient> CreateAsync(string sendPipeHandle, string receivePipeHandle, ISerializer serializer = null, CancellationToken cancellationToken = default)
+        public static LocalIpcClient Create(string sendPipeHandle, string receivePipeHandle, ISerializer serializer = null)
         {
             AnonymousPipeClientStream sendPipe = new (PipeDirection.Out, receivePipeHandle);
             AnonymousPipeClientStream receivePipe = new (PipeDirection.In, sendPipeHandle);
-
-            LocalIpcClient localIpcClient = new (sendPipe, receivePipe, serializer);
-
-            // Send back the process of the client so the server knows if it is running in a different process.
-            await localIpcClient.SendAsync(Environment.ProcessId, cancellationToken).ConfigureAwait(false);
-
-            return localIpcClient;
+            return new (sendPipe, receivePipe, serializer);
         }
 
         private LocalIpcClient(AnonymousPipeClientStream sendPipe, AnonymousPipeClientStream receivePipe, ISerializer serializer)
             : base(sendPipe, receivePipe, serializer)
         {
+        }
+
+        public async Task InitializeAsync(CancellationToken cancellationToken = default)
+        {
+            // Send back the process of the client so the server knows if it is running in a different process.
+            await SendAsync(Environment.ProcessId, cancellationToken).ConfigureAwait(false);
         }
     }
 }
