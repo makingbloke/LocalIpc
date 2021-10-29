@@ -2,6 +2,7 @@
 // This file is licensed to you under the MIT license.
 // See the License.txt file in the solution root for more information.
 
+// TODO: check initialize is completed - make sure EnableReceiveEvents is not set until it is?.
 using DotDoc.LocalIpc.Exceptions;
 using DotDoc.LocalIpc.Serializers;
 using System;
@@ -15,8 +16,6 @@ namespace DotDoc.LocalIpc
     public abstract class LocalIpcBase : IDisposable
     {
         private readonly ISerializer _serializer;
-        private readonly PipeStream _sendPipeStream;
-        private readonly PipeStream _receivePipeStream;
         private bool _isDisposed;
 
         private bool _receiveEventsEnabled;
@@ -24,13 +23,18 @@ namespace DotDoc.LocalIpc
 
         private const string PipeBrokenMessage = "Pipe is broken.";         // message returned in IOException when pipe is broken.
 
-        protected LocalIpcBase(PipeStream sendPipeStream, PipeStream receivePipeStream, ISerializer serializer) =>
-            (_sendPipeStream, _receivePipeStream, _serializer) = (sendPipeStream, receivePipeStream, serializer ?? new DefaultSerializer());
+        protected LocalIpcBase(ISerializer serializer)
+        {
+            _serializer = serializer ?? new DefaultSerializer();
+        }
 
         ~LocalIpcBase()
         {
             Dispose(false);
         }
+
+        protected PipeStream SendPipeStream { get; init; }
+        protected PipeStream ReceivePipeStream { get; init; }
 
         public void Dispose()
         {
@@ -111,8 +115,8 @@ namespace DotDoc.LocalIpc
                 {
                     EnableReceiveEvents = false;
 
-                    _sendPipeStream.Dispose();
-                    _receivePipeStream.Dispose();
+                    SendPipeStream.Dispose();
+                    ReceivePipeStream.Dispose();
 
                     Disposed?.Invoke(this, EventArgs.Empty);
                 }
@@ -125,7 +129,7 @@ namespace DotDoc.LocalIpc
             try
             {
                 byte[] bytes = new byte[length];
-                int bytesRead = await _receivePipeStream.ReadAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);
+                int bytesRead = await ReceivePipeStream.ReadAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);
 
                 if (bytesRead == 0) throw new PipeBrokenException();
                 if (bytesRead < bytes.Length) throw new EndOfStreamException("Unexpected end of stream on receive pipe.");
@@ -141,7 +145,7 @@ namespace DotDoc.LocalIpc
         {
             try
             {
-                await _sendPipeStream.WriteAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);            
+                await SendPipeStream.WriteAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);            
             }
             catch (IOException e) when (e.Message == PipeBrokenMessage)
             {

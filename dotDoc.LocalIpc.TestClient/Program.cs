@@ -7,7 +7,7 @@ namespace IPCClient
     {
         static async Task Main(string[] args)
         {
-            using LocalIpcClient localIpcClient = LocalIpcClient.Create(args[0], args[1]);
+            using LocalIpcClient localIpcClient = new (args[0], args[1]);
             await localIpcClient.InitializeAsync().ConfigureAwait(false);
 
             object value = await localIpcClient.ReceiveAsync().ConfigureAwait(false);

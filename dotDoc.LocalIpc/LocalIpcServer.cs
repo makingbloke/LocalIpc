@@ -13,31 +13,21 @@ namespace DotDoc.LocalIpc
 {
     public class LocalIpcServer : LocalIpcBase
     {
-        private readonly AnonymousPipeServerStream _sendPipe;
-        private readonly AnonymousPipeServerStream _receivePipe;
-
-        public static LocalIpcServer Create(ISerializer serializer = null)
+        public LocalIpcServer(ISerializer serializer = null)
+            : base(serializer)
         {
             AnonymousPipeServerStream sendPipe = new (PipeDirection.Out, HandleInheritability.Inheritable);
-            AnonymousPipeServerStream receivePipe = new (PipeDirection.In, HandleInheritability.Inheritable);
-            return new (sendPipe, receivePipe, serializer);
-        }
-
-        private LocalIpcServer(AnonymousPipeServerStream sendPipe, AnonymousPipeServerStream receivePipe, ISerializer serializer)
-            : base(sendPipe, receivePipe, serializer)
-        {
-            _sendPipe = sendPipe;
+            SendPipeStream = sendPipe;
             SendPipeHandle = sendPipe.GetClientHandleAsString();
 
-            _receivePipe = receivePipe;
+            AnonymousPipeServerStream receivePipe = new (PipeDirection.In, HandleInheritability.Inheritable);
+            ReceivePipeStream = receivePipe;
             ReceivePipeHandle = receivePipe.GetClientHandleAsString();
         }
 
         public string SendPipeHandle { get; }
         public string ReceivePipeHandle { get; }
 
-
-        // TODO: check initialize is completed - make sure EnableReceiveEvents is not set until it is?.
         public async Task InitialiseAsync(CancellationToken cancellationToken = default)
         {
             // Wait for the client to send back its process id. 
@@ -47,8 +37,8 @@ namespace DotDoc.LocalIpc
 
             if (clientProcessId != Environment.ProcessId)
             {
-                _sendPipe.DisposeLocalCopyOfClientHandle();
-                _receivePipe.DisposeLocalCopyOfClientHandle();
+                ((AnonymousPipeServerStream)SendPipeStream).DisposeLocalCopyOfClientHandle();
+                ((AnonymousPipeServerStream)ReceivePipeStream).DisposeLocalCopyOfClientHandle();
             }
         }
     }

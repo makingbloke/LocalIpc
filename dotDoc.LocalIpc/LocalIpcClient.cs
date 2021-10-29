@@ -12,16 +12,11 @@ namespace DotDoc.LocalIpc
 {
     public class LocalIpcClient: LocalIpcBase
     {
-        public static LocalIpcClient Create(string sendPipeHandle, string receivePipeHandle, ISerializer serializer = null)
+        public LocalIpcClient(string sendPipeHandle, string receivePipeHandle, ISerializer serializer = null)
+            : base(serializer)
         {
-            AnonymousPipeClientStream sendPipe = new (PipeDirection.Out, receivePipeHandle);
-            AnonymousPipeClientStream receivePipe = new (PipeDirection.In, sendPipeHandle);
-            return new (sendPipe, receivePipe, serializer);
-        }
-
-        private LocalIpcClient(AnonymousPipeClientStream sendPipe, AnonymousPipeClientStream receivePipe, ISerializer serializer)
-            : base(sendPipe, receivePipe, serializer)
-        {
+            SendPipeStream = new AnonymousPipeClientStream(PipeDirection.Out, receivePipeHandle);
+            ReceivePipeStream = new AnonymousPipeClientStream(PipeDirection.In, sendPipeHandle);
         }
 
         public async Task InitializeAsync(CancellationToken cancellationToken = default)
