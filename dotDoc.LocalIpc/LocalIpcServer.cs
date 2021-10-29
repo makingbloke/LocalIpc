@@ -16,9 +16,6 @@ namespace DotDoc.LocalIpc
         private readonly AnonymousPipeServerStream _sendPipe;
         private readonly AnonymousPipeServerStream _receivePipe;
 
-        public delegate object LaunchClientFuncDelegate(string sendPipeHandle, string receivePipeHandle, params object[] launchArgs);
-        public delegate void LaunchClientActionDelegate(string sendPipeHandle, string receivePipeHandle, params object[] launchArgs);
-
         public static LocalIpcServer Create(ISerializer serializer = null)
         {
             AnonymousPipeServerStream sendPipe = new (PipeDirection.Out, HandleInheritability.Inheritable);
@@ -30,16 +27,19 @@ namespace DotDoc.LocalIpc
             : base(sendPipe, receivePipe, serializer)
         {
             _sendPipe = sendPipe;
+            SendPipeHandle = sendPipe.GetClientHandleAsString();
+
             _receivePipe = receivePipe;
+            ReceivePipeHandle = receivePipe.GetClientHandleAsString();
         }
 
-        public object ClientHandle { get; private set; }
+        public string SendPipeHandle { get; }
+        public string ReceivePipeHandle { get; }
+
 
         // TODO: check initialize is completed - make sure EnableReceiveEvents is not set until it is?.
-        public async Task InitialiseAsync(LaunchClientFuncDelegate launchClient, CancellationToken cancellationToken = default, params object[] launchArgs)
+        public async Task InitialiseAsync(CancellationToken cancellationToken = default)
         {
-            ClientHandle = launchClient(_sendPipe.GetClientHandleAsString(), _receivePipe.GetClientHandleAsString(), launchArgs);
-
             // Wait for the client to send back its process id. 
             // If it is running on a different process to the server then dispose of the local copy of the client handles.
             // If the handles are not disposed then the server cannot track if the client has closed the pipe unexpectedly.
@@ -49,17 +49,6 @@ namespace DotDoc.LocalIpc
             {
                 _sendPipe.DisposeLocalCopyOfClientHandle();
                 _receivePipe.DisposeLocalCopyOfClientHandle();
-            }
-        }
-
-        public async Task InitialiseAsync(LaunchClientActionDelegate launchClient, CancellationToken cancellationToken = default, params object[] launchArgs)
-        {
-            await InitialiseAsync(LaunchClientInternal, cancellationToken, launchArgs).ConfigureAwait(false);
-
-            object LaunchClientInternal(string sendPipeHandle, string receivePipeHandle, object[] launchArgs)
-            {
-                launchClient(sendPipeHandle, receivePipeHandle, launchArgs);
-                return null;
             }
         }
     }
