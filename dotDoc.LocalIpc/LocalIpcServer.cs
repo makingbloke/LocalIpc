@@ -28,8 +28,10 @@ namespace DotDoc.LocalIpc
         public string SendPipeHandle { get; }
         public string ReceivePipeHandle { get; }
 
-        public async Task InitialiseAsync(CancellationToken cancellationToken = default)
+        public async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
+            IsInitialized = true;
+
             // Wait for the client to send back its process id. 
             // If it is running on a different process to the server then dispose of the local copy of the client handles.
             // If the handles are not disposed then the server cannot track if the client has closed the pipe unexpectedly.

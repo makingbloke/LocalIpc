@@ -2,7 +2,6 @@
 // This file is licensed to you under the MIT license.
 // See the License.txt file in the solution root for more information.
 
-// TODO: check initialize is completed - make sure EnableReceiveEvents is not set until it is?.
 using DotDoc.LocalIpc.Exceptions;
 using DotDoc.LocalIpc.Serializers;
 using System;
@@ -15,13 +14,15 @@ namespace DotDoc.LocalIpc
 {
     public abstract class LocalIpcBase : IDisposable
     {
-        private readonly ISerializer _serializer;
         private bool _isDisposed;
-
-        private bool _receiveEventsEnabled;
+        private readonly ISerializer _serializer;
+        private bool _isReceiveEventsEnabled;
         private CancellationTokenSource _cancellationTokenSource;
 
         private const string PipeBrokenMessage = "Pipe is broken.";         // message returned in IOException when pipe is broken.
+
+        public EventHandler Disposed;
+        public EventHandler<ReceivedEventArgs> Received;
 
         protected LocalIpcBase(ISerializer serializer)
         {
@@ -33,27 +34,30 @@ namespace DotDoc.LocalIpc
             Dispose(false);
         }
 
-        protected PipeStream SendPipeStream { get; init; }
-        protected PipeStream ReceivePipeStream { get; init; }
-
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
-        public EventHandler Disposed;
-        public EventHandler<ReceivedEventArgs> Received;
+        protected bool IsInitialized { get; set; }
+        protected PipeStream SendPipeStream { get; set; }
+        protected PipeStream ReceivePipeStream { get; set; }
 
-        public bool EnableReceiveEvents
+        public bool IsReceiveEventsEnabled
         {
             set
             {
-                if (_receiveEventsEnabled != value)
+                if (!IsInitialized)
                 {
-                    _receiveEventsEnabled = value;
+                    throw new LocalIpcNotInitialisedException();
+                }
 
-                    if (_receiveEventsEnabled)
+                if (_isReceiveEventsEnabled != value)
+                {
+                    _isReceiveEventsEnabled = value;
+
+                    if (_isReceiveEventsEnabled)
                     {
                         _cancellationTokenSource = new CancellationTokenSource();
                         Task.Run(async () =>
@@ -80,11 +84,16 @@ namespace DotDoc.LocalIpc
                 }
             }
 
-            get => _receiveEventsEnabled;
+            get => _isReceiveEventsEnabled;
         }
 
         public async Task SendAsync(object value, CancellationToken cancellationToken = default)
         {
+            if (!IsInitialized)
+            {
+                throw new LocalIpcNotInitialisedException();
+            }
+
             byte[] valueBytes = _serializer.Serialize(value);
             byte[] lengthBytes = BitConverter.GetBytes(valueBytes.Length);
 
@@ -97,6 +106,11 @@ namespace DotDoc.LocalIpc
 
         public async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken = default)        
         {
+            if (!IsInitialized)
+            {
+                throw new LocalIpcNotInitialisedException();
+            }
+
             byte[] lengthBytes = await ReadBytesAsync(sizeof(int), cancellationToken).ConfigureAwait(false);
             int length = BitConverter.ToInt32(lengthBytes);
 
@@ -113,7 +127,10 @@ namespace DotDoc.LocalIpc
 
                 if (disposing)
                 {
-                    EnableReceiveEvents = false;
+                    if (IsInitialized)
+                    {
+                        IsReceiveEventsEnabled = false;
+                    }
 
                     SendPipeStream.Dispose();
                     ReceivePipeStream.Dispose();
@@ -125,7 +142,6 @@ namespace DotDoc.LocalIpc
 
         private async Task<byte[]> ReadBytesAsync(int length, CancellationToken cancellationToken)
         {
-
             try
             {
                 byte[] bytes = new byte[length];

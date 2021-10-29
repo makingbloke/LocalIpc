@@ -21,6 +21,8 @@ namespace DotDoc.LocalIpc
 
         public async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
+            IsInitialized = true;
+
             // Send back the process of the client so the server knows if it is running in a different process.
             await SendAsync(Environment.ProcessId, cancellationToken).ConfigureAwait(false);
         }
