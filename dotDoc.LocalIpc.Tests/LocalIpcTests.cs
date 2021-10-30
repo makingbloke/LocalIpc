@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace dotDoc.LocalIpc.Tests
 {
     /// <summary>
-    /// LocalIpcClient/Server tests.
+    /// LocalIpc tests.
     /// </summary>
     [TestClass]
     public class LocalIpcTests
@@ -23,11 +23,11 @@ namespace dotDoc.LocalIpc.Tests
         private record TestObject(string TextValue, int IntValue);
 
         /// <summary>
-        /// Test that an exception is thrown if a method is called server side before calling Initialize.
+        /// Test that an exception is thrown if a send is attempted before calling Initialize.
         /// </summary>
         /// <returns><see cref="Task"/>.</returns>
         [TestMethod]
-        public async Task TestServerNotInitializedExceptionAsync()
+        public async Task TestSendNotInitializedExceptionAsync()
         {
             const string sendText = "Hello";
 
@@ -41,29 +41,36 @@ namespace dotDoc.LocalIpc.Tests
         }
 
         /// <summary>
-        /// Test that an exception is thrown if a method is called client side before calling Initialize.
+        /// Test that an exception is thrown if a receive is attempted before calling Initialize.
         /// </summary>
         /// <returns><see cref="Task"/>.</returns>
         [TestMethod]
-        public void TestClientNotInitializedException()
+        public async Task TestReceiveNotInitializedExceptionAsync()
         {
-            const string sendText = "Hello";
+            using LocalIpcServer localIpcServer = new();
 
-            using LocalIpcServer localIpcServer = new ();
-
-            Task.Run(async () =>
+            await Assert.ThrowsExceptionAsync<LocalIpcNotInitializedException>(async () =>
             {
-                using LocalIpcClient localIpcClient = new (localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
-
-                await Assert.ThrowsExceptionAsync<LocalIpcNotInitializedException>(async () =>
-                {
-                    await localIpcClient.SendAsync(sendText).ConfigureAwait(false);
-
-                }).ConfigureAwait(false);
+                await localIpcServer.ReceiveAsync().ConfigureAwait(false);
 
             }).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Test that an exception is thrown if a method if the receive event property is changed before calling Initialize.
+        /// </summary>
+        /// <returns><see cref="Task"/>.</returns>
+        [TestMethod]
+        public void TestReceiveEventNotInitializedException()
+        {
+            using LocalIpcServer localIpcServer = new();
+
+            Assert.ThrowsException<LocalIpcNotInitializedException>(() =>
+            {
+                localIpcServer.IsReceiveEventsEnabled = true;
+
+            });
+        }
 
         /// <summary>
         /// Test sending and receiving a string
@@ -217,22 +224,18 @@ namespace dotDoc.LocalIpc.Tests
         /// </summary>
         /// <returns><see cref="Task"/>.</returns>
         [TestMethod]
-        public void TestCancelClientInitialize()
+        public async Task TestCancelClientInitializeAsync()
         {
             CancellationTokenSource cancellationTokenSource = new ();
             cancellationTokenSource.Cancel();
 
             using LocalIpcServer localIpcServer = new ();
 
-            Task.Run(async () =>
+            using LocalIpcClient localIpcClient = new (localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
+
+            await Assert.ThrowsExceptionAsync<TaskCanceledException>(async () =>
             {
-                using LocalIpcClient localIpcClient = new (localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
-
-                await Assert.ThrowsExceptionAsync<TaskCanceledException>(async () =>
-                {
-                    await localIpcClient.InitializeAsync(cancellationTokenSource.Token).ConfigureAwait(false);
-
-                }).ConfigureAwait(false);
+                await localIpcClient.InitializeAsync(cancellationTokenSource.Token).ConfigureAwait(false);
 
             }).ConfigureAwait(false);
         }
@@ -303,11 +306,11 @@ namespace dotDoc.LocalIpc.Tests
         }
 
         /// <summary>
-        /// Test checking that sending to a non existant external client raises an exception.
+        /// Test checking that sending to a non existant external client raises a pipe broken exception.
         /// </summary>
         /// <returns><see cref="Task"/>.</returns>
         [TestMethod]
-        public async Task TestBrokenPipeExternalClientAsync()
+        public async Task TestSendExternalClientBrokenPipeAsync()
         {
             const string sendText = "Hello";
 
