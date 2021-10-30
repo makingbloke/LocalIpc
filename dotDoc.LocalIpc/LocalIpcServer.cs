@@ -13,24 +13,32 @@ namespace DotDoc.LocalIpc
 {
     public class LocalIpcServer : LocalIpcBase
     {
-        public LocalIpcServer(ISerializer serializer = null)
-            : base(serializer)
+        private readonly AnonymousPipeServerStream _sendPipe;
+        private readonly AnonymousPipeServerStream _receivePipe;
+
+        public static LocalIpcServer Create(ISerializer serializer = null)
         {
             AnonymousPipeServerStream sendPipe = new (PipeDirection.Out, HandleInheritability.Inheritable);
-            SendPipeStream = sendPipe;
+            AnonymousPipeServerStream receivePipe = new (PipeDirection.In, HandleInheritability.Inheritable);
+            return new LocalIpcServer(sendPipe, receivePipe, serializer);
+        }
+
+        protected LocalIpcServer(AnonymousPipeServerStream sendPipe, AnonymousPipeServerStream receivePipe, ISerializer serializer = null)
+            : base(sendPipe, receivePipe, serializer)
+        {
+            _sendPipe = sendPipe;
             SendPipeHandle = sendPipe.GetClientHandleAsString();
 
-            AnonymousPipeServerStream receivePipe = new (PipeDirection.In, HandleInheritability.Inheritable);
-            ReceivePipeStream = receivePipe;
+            _receivePipe = receivePipe;
             ReceivePipeHandle = receivePipe.GetClientHandleAsString();
         }
 
         public string SendPipeHandle { get; }
         public string ReceivePipeHandle { get; }
 
-        public async Task InitializeAsync(CancellationToken cancellationToken = default)
+        public override async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
-            IsInitialized = true;
+            await base.InitializeAsync(cancellationToken).ConfigureAwait(false);
 
             // Wait for the client to send back its process id. 
             // If it is running on a different process to the server then dispose of the local copy of the client handles.
@@ -39,8 +47,8 @@ namespace DotDoc.LocalIpc
 
             if (clientProcessId != Environment.ProcessId)
             {
-                ((AnonymousPipeServerStream)SendPipeStream).DisposeLocalCopyOfClientHandle();
-                ((AnonymousPipeServerStream)ReceivePipeStream).DisposeLocalCopyOfClientHandle();
+                _sendPipe.DisposeLocalCopyOfClientHandle();
+                _receivePipe.DisposeLocalCopyOfClientHandle();
             }
         }
     }

@@ -23,6 +23,24 @@ namespace dotDoc.LocalIpc.Tests
         private record TestObject(string TextValue, int IntValue);
 
         /// <summary>
+        /// Test that an exception is thrown if an attempt is made to initialize Local Ipc twice.
+        /// </summary>
+        /// <returns><see cref="Task"/>.</returns>
+        [TestMethod]
+        public async Task TestAlreadyInitializedException()
+        {
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
+            LaunchInternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
+            await localIpcServer.InitializeAsync().ConfigureAwait(false);
+
+            await Assert.ThrowsExceptionAsync<LocalIpcAlreadyInitializedException>(async () =>
+            {
+                await localIpcServer.InitializeAsync().ConfigureAwait(false);
+
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Test that an exception is thrown if a send is attempted before calling Initialize.
         /// </summary>
         /// <returns><see cref="Task"/>.</returns>
@@ -31,7 +49,7 @@ namespace dotDoc.LocalIpc.Tests
         {
             const string sendText = "Hello";
 
-            using LocalIpcServer localIpcServer = new ();
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
 
             await Assert.ThrowsExceptionAsync<LocalIpcNotInitializedException>(async () =>
             {
@@ -47,7 +65,7 @@ namespace dotDoc.LocalIpc.Tests
         [TestMethod]
         public async Task TestReceiveNotInitializedExceptionAsync()
         {
-            using LocalIpcServer localIpcServer = new();
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
 
             await Assert.ThrowsExceptionAsync<LocalIpcNotInitializedException>(async () =>
             {
@@ -59,11 +77,10 @@ namespace dotDoc.LocalIpc.Tests
         /// <summary>
         /// Test that an exception is thrown if a method if the receive event property is changed before calling Initialize.
         /// </summary>
-        /// <returns><see cref="Task"/>.</returns>
         [TestMethod]
         public void TestReceiveEventNotInitializedException()
         {
-            using LocalIpcServer localIpcServer = new();
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
 
             Assert.ThrowsException<LocalIpcNotInitializedException>(() =>
             {
@@ -73,7 +90,7 @@ namespace dotDoc.LocalIpc.Tests
         }
 
         /// <summary>
-        /// Test sending and receiving a string
+        /// Test sending and receiving a string.
         /// </summary>
         /// <returns><see cref="Task"/>.</returns>
         [TestMethod]
@@ -81,7 +98,7 @@ namespace dotDoc.LocalIpc.Tests
         {
             const string sendText = "Hello";
 
-            using LocalIpcServer localIpcServer = new ();
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
             LaunchInternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
             await localIpcServer.InitializeAsync().ConfigureAwait(false);
 
@@ -100,7 +117,7 @@ namespace dotDoc.LocalIpc.Tests
         {
             TestObject sendTestObject = new ("Hello", 1);
 
-            using LocalIpcServer localIpcServer = new ();
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
             LaunchInternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
             await localIpcServer.InitializeAsync().ConfigureAwait(false);
 
@@ -121,7 +138,7 @@ namespace dotDoc.LocalIpc.Tests
             const string sendText = "Hello";
             TaskCompletionSource tcs = new ();
 
-            using LocalIpcServer localIpcServer = new ();
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
             LaunchInternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
             await localIpcServer.InitializeAsync().ConfigureAwait(false);
 
@@ -153,7 +170,7 @@ namespace dotDoc.LocalIpc.Tests
             TestObject sendTestClass = new ("Hello", 1);
             TaskCompletionSource tcs = new ();
 
-            using LocalIpcServer localIpcServer = new ();
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
             LaunchInternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
             await localIpcServer.InitializeAsync().ConfigureAwait(false);
 
@@ -184,7 +201,7 @@ namespace dotDoc.LocalIpc.Tests
             const int receivedEventTimeout = 2000;
             TaskCompletionSource tcs = new ();
 
-            using (LocalIpcServer localIpcServer = new ())
+            using (LocalIpcServer localIpcServer = LocalIpcServer.Create())
             {
                 LaunchInternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
                 await localIpcServer.InitializeAsync().ConfigureAwait(false);
@@ -213,7 +230,7 @@ namespace dotDoc.LocalIpc.Tests
 
             await Assert.ThrowsExceptionAsync<TaskCanceledException>(async () =>
             {
-                using LocalIpcServer localIpcServer = new ();
+                using LocalIpcServer localIpcServer = LocalIpcServer.Create();
                 await localIpcServer.InitializeAsync(cancellationTokenSource.Token).ConfigureAwait(false);
 
             }).ConfigureAwait(false);
@@ -229,9 +246,8 @@ namespace dotDoc.LocalIpc.Tests
             CancellationTokenSource cancellationTokenSource = new ();
             cancellationTokenSource.Cancel();
 
-            using LocalIpcServer localIpcServer = new ();
-
-            using LocalIpcClient localIpcClient = new (localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
+            using LocalIpcClient localIpcClient = LocalIpcClient.Create(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
 
             await Assert.ThrowsExceptionAsync<TaskCanceledException>(async () =>
             {
@@ -251,7 +267,7 @@ namespace dotDoc.LocalIpc.Tests
             CancellationTokenSource cancellationTokenSource = new ();
             cancellationTokenSource.Cancel();
 
-            using LocalIpcServer localIpcServer = new ();
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
             LaunchInternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
             await localIpcServer.InitializeAsync().ConfigureAwait(false);
 
@@ -273,7 +289,7 @@ namespace dotDoc.LocalIpc.Tests
             CancellationTokenSource cancellationTokenSource = new ();
             cancellationTokenSource.Cancel();
 
-            using LocalIpcServer localIpcServer = new ();
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
             LaunchInternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
             await localIpcServer.InitializeAsync().ConfigureAwait(false);
 
@@ -295,7 +311,7 @@ namespace dotDoc.LocalIpc.Tests
         {
             const string sendText = "Hello";
 
-            using LocalIpcServer localIpcServer = new ();
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
             using Process process = LaunchExternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
             await localIpcServer.InitializeAsync().ConfigureAwait(false);
 
@@ -314,7 +330,7 @@ namespace dotDoc.LocalIpc.Tests
         {
             const string sendText = "Hello";
 
-            using LocalIpcServer localIpcServer = new ();
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
             using Process process = LaunchExternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
             await localIpcServer.InitializeAsync().ConfigureAwait(false);
 
@@ -340,7 +356,7 @@ namespace dotDoc.LocalIpc.Tests
         {
             Task.Run(async () =>
             {
-                using LocalIpcClient localIpcClient = new (sendPipeHandle, receivePipeHandle);
+                using LocalIpcClient localIpcClient = LocalIpcClient.Create(sendPipeHandle, receivePipeHandle);
                 await localIpcClient.InitializeAsync().ConfigureAwait(false);
 
                 object value = await localIpcClient.ReceiveAsync().ConfigureAwait(false);

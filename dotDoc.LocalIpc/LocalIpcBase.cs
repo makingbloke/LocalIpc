@@ -15,7 +15,10 @@ namespace DotDoc.LocalIpc
     public abstract class LocalIpcBase : IDisposable
     {
         private bool _isDisposed;
+        private readonly PipeStream _sendPipeStream;
+        private readonly PipeStream _receivePipeStream;
         private readonly ISerializer _serializer;
+        private bool _isInitialized;
         private bool _isReceiveEventsEnabled;
         private CancellationTokenSource _cancellationTokenSource;
 
@@ -24,10 +27,8 @@ namespace DotDoc.LocalIpc
         public EventHandler Disposed;
         public EventHandler<ReceivedEventArgs> Received;
 
-        protected LocalIpcBase(ISerializer serializer)
-        {
-            _serializer = serializer ?? new DefaultSerializer();
-        }
+        protected LocalIpcBase(PipeStream sendPipeStream, PipeStream receivePipeStream, ISerializer serializer) =>
+            (_sendPipeStream, _receivePipeStream, _serializer) = (sendPipeStream, receivePipeStream, serializer ?? new DefaultSerializer());
 
         ~LocalIpcBase()
         {
@@ -40,15 +41,22 @@ namespace DotDoc.LocalIpc
             GC.SuppressFinalize(this);
         }
 
-        protected bool IsInitialized { get; set; }
-        protected PipeStream SendPipeStream { get; set; }
-        protected PipeStream ReceivePipeStream { get; set; }
+        public virtual Task InitializeAsync(CancellationToken cancellationToken = default)
+        {
+            if (_isInitialized)
+            {
+                throw new LocalIpcAlreadyInitializedException();
+            }
+
+            _isInitialized = true;
+            return Task.CompletedTask;
+        }
 
         public bool IsReceiveEventsEnabled
         {
             set
             {
-                if (!IsInitialized)
+                if (!_isInitialized)
                 {
                     throw new LocalIpcNotInitializedException();
                 }
@@ -89,7 +97,7 @@ namespace DotDoc.LocalIpc
 
         public async Task SendAsync(object value, CancellationToken cancellationToken = default)
         {
-            if (!IsInitialized)
+            if (!_isInitialized)
             {
                 throw new LocalIpcNotInitializedException();
             }
@@ -106,7 +114,7 @@ namespace DotDoc.LocalIpc
 
         public async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken = default)        
         {
-            if (!IsInitialized)
+            if (!_isInitialized)
             {
                 throw new LocalIpcNotInitializedException();
             }
@@ -127,13 +135,13 @@ namespace DotDoc.LocalIpc
 
                 if (disposing)
                 {
-                    if (IsInitialized)
+                    if (_isInitialized)
                     {
                         IsReceiveEventsEnabled = false;
                     }
 
-                    SendPipeStream.Dispose();
-                    ReceivePipeStream.Dispose();
+                    _sendPipeStream.Dispose();
+                    _receivePipeStream.Dispose();
 
                     Disposed?.Invoke(this, EventArgs.Empty);
                 }
@@ -145,7 +153,7 @@ namespace DotDoc.LocalIpc
             try
             {
                 byte[] bytes = new byte[length];
-                int bytesRead = await ReceivePipeStream.ReadAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);
+                int bytesRead = await _receivePipeStream.ReadAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);
 
                 if (bytesRead == 0) throw new PipeBrokenException();
                 if (bytesRead < bytes.Length) throw new EndOfStreamException("Unexpected end of stream on receive pipe.");
@@ -161,7 +169,7 @@ namespace DotDoc.LocalIpc
         {
             try
             {
-                await SendPipeStream.WriteAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);            
+                await _sendPipeStream.WriteAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);            
             }
             catch (IOException e) when (e.Message == PipeBrokenMessage)
             {
