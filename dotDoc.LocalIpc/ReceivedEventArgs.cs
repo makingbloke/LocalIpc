@@ -15,7 +15,14 @@ namespace DotDoc.LocalIpc
             _value = value;
         }
 
-        public object GetValue() => _value;
-        public T GetValue<T>() => (T)_value;
+        public object GetValue()
+        {
+            return _value;
+        }
+
+        public T GetValue<T>()
+        {
+            return (T)Convert.ChangeType(_value, typeof(T));
+        }
     }
 }

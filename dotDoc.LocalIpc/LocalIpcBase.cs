@@ -12,8 +12,12 @@ using System.Threading.Tasks;
 
 namespace DotDoc.LocalIpc
 {
+    /// <summary>
+    /// LocalIpc base class.
+    /// </summary>
     public abstract class LocalIpcBase : IDisposable
     {
+
         private bool _isDisposed;
         private readonly PipeStream _sendPipeStream;
         private readonly PipeStream _receivePipeStream;
@@ -24,11 +28,20 @@ namespace DotDoc.LocalIpc
 
         private const string PipeBrokenMessage = "Pipe is broken.";         // message returned in IOException when pipe is broken.
 
+        /// <summary>
+        /// Event raised when object is disposed.
+        /// </summary>
         public EventHandler Disposed;
+
+        /// <summary>
+        /// Event raised when an object is received (only raised when <see cref="IsReceiveEventsEnabled"/> is <c>true</c>).
+        /// </summary>
         public EventHandler<ReceivedEventArgs> Received;
 
-        protected LocalIpcBase(PipeStream sendPipeStream, PipeStream receivePipeStream, ISerializer serializer) =>
+        protected LocalIpcBase(PipeStream sendPipeStream, PipeStream receivePipeStream, ISerializer serializer)
+        {
             (_sendPipeStream, _receivePipeStream, _serializer) = (sendPipeStream, receivePipeStream, serializer ?? new DefaultSerializer());
+        }
 
         ~LocalIpcBase()
         {
@@ -52,6 +65,9 @@ namespace DotDoc.LocalIpc
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Sets a value indicating whether Receive events are raised.
+        /// </summary>
         public bool IsReceiveEventsEnabled
         {
             set
@@ -61,12 +77,11 @@ namespace DotDoc.LocalIpc
                     throw new LocalIpcNotInitializedException();
                 }
 
-                if (_isReceiveEventsEnabled != value)
+                switch (value)
                 {
-                    _isReceiveEventsEnabled = value;
+                    case true when !_isReceiveEventsEnabled:
+                        _isReceiveEventsEnabled = true;
 
-                    if (_isReceiveEventsEnabled)
-                    {
                         _cancellationTokenSource = new CancellationTokenSource();
                         Task.Run(async () =>
                         {
@@ -74,7 +89,7 @@ namespace DotDoc.LocalIpc
                             {
                                 try
                                 {
-                                    object value = await ReceiveAsync(_cancellationTokenSource.Token).ConfigureAwait(false);
+                                    object value = await ReceiveObjectAsync<object>(_cancellationTokenSource.Token).ConfigureAwait(false);
                                     Received?.Invoke(this, new ReceivedEventArgs(value));
                                 }
                                 catch (TaskCanceledException)
@@ -83,18 +98,29 @@ namespace DotDoc.LocalIpc
                                 }
                             }
                         });
-                    }
-                    else
-                    {
+                        break;
+
+                    case false when _isReceiveEventsEnabled:
+                        _isReceiveEventsEnabled = false;
+
                         _cancellationTokenSource.Cancel();
                         _cancellationTokenSource.Dispose();
-                    }
+                        break;
                 }
             }
 
-            get => _isReceiveEventsEnabled;
+            get
+            {
+                return _isReceiveEventsEnabled;
+            }
         }
 
+        /// <summary>
+        /// Send an object.
+        /// </summary>
+        /// <param name="value">The object to send.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns><see cref="Task"/>.</returns>
         public async Task SendAsync(object value, CancellationToken cancellationToken = default)
         {
             if (!_isInitialized)
@@ -109,22 +135,35 @@ namespace DotDoc.LocalIpc
             await WriteBytesAsync(valueBytes, cancellationToken).ConfigureAwait(false);
         }
 
-        public Task<object> ReceiveAsync(CancellationToken cancellationToken = default) =>
-            ReceiveAsync<object>(cancellationToken);
+        /// <summary>
+        /// Receive an object.
+        /// </summary>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns><see cref="Task"/>.</returns>
+        public Task<object> ReceiveAsync(CancellationToken cancellationToken = default)
+        {
+            return ReceiveAsync<object>(cancellationToken);
+        }
 
-        public async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken = default)        
+        /// <summary>
+        /// Receive an object.
+        /// </summary>
+        /// <typeparam name="T">The type of object to receive.</typeparam>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>A instance of <see cref="{T}"/>.</returns>
+        public Task<T> ReceiveAsync<T>(CancellationToken cancellationToken = default)        
         {
             if (!_isInitialized)
             {
                 throw new LocalIpcNotInitializedException();
             }
 
-            byte[] lengthBytes = await ReadBytesAsync(sizeof(int), cancellationToken).ConfigureAwait(false);
-            int length = BitConverter.ToInt32(lengthBytes);
+            if (IsReceiveEventsEnabled)
+            {
+                throw new InvalidOperationException("Cannot manually receive an object while Receive events are enabled.");
+            }
 
-            byte[] valueBytes = await ReadBytesAsync(length, cancellationToken).ConfigureAwait(false);
-            T value = _serializer.Deserialize<T>(valueBytes);
-            return value;
+            return ReceiveObjectAsync<T>(cancellationToken);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -148,6 +187,16 @@ namespace DotDoc.LocalIpc
             }
         }
 
+        private async Task<T> ReceiveObjectAsync<T>(CancellationToken cancellationToken = default)
+        {
+            byte[] lengthBytes = await ReadBytesAsync(sizeof(int), cancellationToken).ConfigureAwait(false);
+            int length = BitConverter.ToInt32(lengthBytes);
+
+            byte[] valueBytes = await ReadBytesAsync(length, cancellationToken).ConfigureAwait(false);
+            T value = _serializer.Deserialize<T>(valueBytes);
+            return value;
+        }
+
         private async Task<byte[]> ReadBytesAsync(int length, CancellationToken cancellationToken)
         {
             try
@@ -155,8 +204,16 @@ namespace DotDoc.LocalIpc
                 byte[] bytes = new byte[length];
                 int bytesRead = await _receivePipeStream.ReadAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);
 
-                if (bytesRead == 0) throw new PipeBrokenException();
-                if (bytesRead < bytes.Length) throw new EndOfStreamException("Unexpected end of stream on receive pipe.");
+                if (bytesRead == 0)
+                {
+                    throw new PipeBrokenException();
+                }
+
+                if (bytesRead < bytes.Length)
+                {
+                    throw new EndOfStreamException("Unexpected end of stream on receive pipe.");
+                }
+
                 return bytes;
             }
             catch (IOException e) when (e.Message == PipeBrokenMessage)

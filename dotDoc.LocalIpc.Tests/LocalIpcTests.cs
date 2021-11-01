@@ -5,6 +5,7 @@
 using DotDoc.LocalIpc;
 using DotDoc.LocalIpc.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -87,6 +88,26 @@ namespace dotDoc.LocalIpc.Tests
                 localIpcServer.IsReceiveEventsEnabled = true;
 
             });
+        }
+
+        /// <summary>
+        /// Test an exception is thrown if a manual receive is attempted while receive events are enabled.
+        /// </summary>
+        /// <returns><see cref="Task"/>.</returns>
+        [TestMethod]
+        public async Task TestReceiveWhenReceiveEventsEnabledExceptionAsync()
+        {
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
+            LaunchInternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
+            await localIpcServer.InitializeAsync().ConfigureAwait(false);
+
+            localIpcServer.IsReceiveEventsEnabled = true;
+
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(async () =>
+            {
+                await localIpcServer.ReceiveAsync().ConfigureAwait(false);
+
+            }).ConfigureAwait(false);
         }
 
         /// <summary>

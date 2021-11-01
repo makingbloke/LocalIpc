@@ -7,6 +7,7 @@ using System.Text;
 
 namespace DotDoc.LocalIpc.Serializers
 {
+    /// <inheritdoc/>
     public class DefaultSerializer : ISerializer
     {
         private static readonly JsonSerializerSettings settings = new ()
@@ -14,6 +15,7 @@ namespace DotDoc.LocalIpc.Serializers
             TypeNameHandling = TypeNameHandling.All
         };
 
+        /// <inheritdoc/>
         public byte[] Serialize(object value)
         {
             string json = JsonConvert.SerializeObject(value, settings);
@@ -21,6 +23,7 @@ namespace DotDoc.LocalIpc.Serializers
             return bytes;
         }
 
+        /// <inheritdoc/>
         public T Deserialize<T>(byte[] bytes)
         {
             string json = Encoding.UTF8.GetString(bytes);
