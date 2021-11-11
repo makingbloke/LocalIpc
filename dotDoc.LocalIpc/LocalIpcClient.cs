@@ -26,7 +26,7 @@ namespace DotDoc.LocalIpc
             return new LocalIpcClient(sendPipe, receivePipe, serializer);
         }
 
-        protected LocalIpcClient(AnonymousPipeClientStream sendPipe, AnonymousPipeClientStream receivePipe, ISerializer serializer = null)
+        protected LocalIpcClient(AnonymousPipeClientStream sendPipe, AnonymousPipeClientStream receivePipe, ISerializer serializer)
             : base(sendPipe, receivePipe, serializer)
         {
         }

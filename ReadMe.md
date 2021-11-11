@@ -9,7 +9,7 @@ LocalIpc is a simple library for communicating between two objects. The objects 
 
 ## Pre-Requisites
 
-This solution uses .Net 5.0. 
+This solution uses .Net 6.0. 
 
 ## Usage
 

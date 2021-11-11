@@ -157,6 +157,7 @@ namespace dotDoc.LocalIpc.Tests
         {
             const int receivedEventTimeout = 2000;
             const string sendText = "Hello";
+            string receiveText = null;
             TaskCompletionSource tcs = new ();
 
             using LocalIpcServer localIpcServer = LocalIpcServer.Create();
@@ -167,8 +168,7 @@ namespace dotDoc.LocalIpc.Tests
 
             localIpcServer.Received += (s, e) =>
             {
-                string receiveText = e.GetValue<string>();
-                Assert.AreEqual(sendText, receiveText, "Unexpected text received");
+                receiveText = e.GetValue<string>();
                 tcs.SetResult();
             };
 
@@ -178,6 +178,8 @@ namespace dotDoc.LocalIpc.Tests
             {
                 Assert.Fail("Timeout waiting for received event");
             }
+
+            Assert.AreEqual(sendText, receiveText, "Unexpected text received");
         }
 
         /// <summary>
@@ -189,6 +191,7 @@ namespace dotDoc.LocalIpc.Tests
         {
             const int receivedEventTimeout = 2000;
             TestObject sendTestClass = new ("Hello", 1);
+            TestObject receiveTestClass = null;
             TaskCompletionSource tcs = new ();
 
             using LocalIpcServer localIpcServer = LocalIpcServer.Create();
@@ -199,8 +202,7 @@ namespace dotDoc.LocalIpc.Tests
 
             localIpcServer.Received += (s, e) =>
             {
-                TestObject receiveTestClass = e.GetValue<TestObject>();
-                Assert.AreEqual(sendTestClass, receiveTestClass, "Unexpected object received");
+                receiveTestClass = e.GetValue<TestObject>();
                 tcs.SetResult();
             };
 
@@ -210,6 +212,8 @@ namespace dotDoc.LocalIpc.Tests
             {
                 Assert.Fail("Timeout waiting for received event");
             }
+
+            Assert.AreEqual(sendTestClass, receiveTestClass, "Unexpected object received");
         }
 
         /// <summary>
@@ -352,12 +356,17 @@ namespace dotDoc.LocalIpc.Tests
             const string sendText = "Hello";
 
             using LocalIpcServer localIpcServer = LocalIpcServer.Create();
-            using Process process = LaunchExternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
-            await localIpcServer.InitializeAsync().ConfigureAwait(false);
+            
+            using (Process process = LaunchExternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle))
+            {
+                await localIpcServer.InitializeAsync().ConfigureAwait(false);
 
-            // send an receive to external client - the external client will exit after this
-            await localIpcServer.SendAsync(sendText).ConfigureAwait(false);
-            string receiveText = await localIpcServer.ReceiveAsync<string>().ConfigureAwait(false);
+                // send an receive to external client - the external client will exit after this
+                await localIpcServer.SendAsync(sendText).ConfigureAwait(false);
+                string receiveText = await localIpcServer.ReceiveAsync<string>().ConfigureAwait(false);
+
+                await process.WaitForExitAsync().ConfigureAwait(false);
+            }
 
             // send again, the pipe should be broken
             await Assert.ThrowsExceptionAsync<PipeBrokenException>(async () =>
@@ -394,7 +403,7 @@ namespace dotDoc.LocalIpc.Tests
         /// <returns>A <see cref="Process"/> object for the client.</returns>
         private static Process LaunchExternalClient(string sendPipeHandle, string receivePipeHandle)
         {
-            return Process.Start(@"..\..\..\..\dotDoc.LocalIpc.TestClient\bin\Debug\net5.0\dotDoc.LocalIpc.TestClient.exe", $"{sendPipeHandle} {receivePipeHandle}");
+            return Process.Start(@"..\..\..\..\dotDoc.LocalIpc.TestClient\bin\Debug\net6.0\dotDoc.LocalIpc.TestClient.exe", $"{sendPipeHandle} {receivePipeHandle}");
         }
     }
 }
