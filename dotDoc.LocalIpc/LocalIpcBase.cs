@@ -26,8 +26,6 @@ namespace DotDoc.LocalIpc
         private bool _isReceiveEventsEnabled;
         private CancellationTokenSource _cancellationTokenSource;
 
-        private const string PipeBrokenMessage = "Pipe is broken.";         // message returned in IOException when pipe is broken.
-
         /// <summary>
         /// Event raised when object is disposed.
         /// </summary>
@@ -216,7 +214,7 @@ namespace DotDoc.LocalIpc
 
                 return bytes;
             }
-            catch (IOException e) when (e.Message == PipeBrokenMessage)
+            catch (Exception e) when (IsPipeBrokenException(e))
             {
                 throw new PipeBrokenException();
             }
@@ -228,10 +226,13 @@ namespace DotDoc.LocalIpc
             {
                 await _sendPipeStream.WriteAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);            
             }
-            catch (IOException e) when (e.Message == PipeBrokenMessage)
+            catch (Exception e) when (IsPipeBrokenException(e))
             {
                 throw new PipeBrokenException();
             }
         }
+
+        private static bool IsPipeBrokenException(Exception e)
+            => e is IOException && e.Message == "Pipe is broken.";
     }
 }
