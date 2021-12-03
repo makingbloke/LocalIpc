@@ -232,7 +232,7 @@ namespace DotDoc.LocalIpc
             }
         }
 
-        private static bool IsPipeBrokenException(Exception e)
+        private bool IsPipeBrokenException(Exception e)
             => e is IOException && e.Message == "Pipe is broken.";
     }
 }

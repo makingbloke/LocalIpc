@@ -10,3 +10,4 @@
 
 * Tidied up the broken pipe exception trapping code.
 * Updated Test Adapter and Test Framework Nuget packages.
+* Simplified the ```ReceivedEventArgs``` class. Replaced the ```GetValue``` method with a property ```Value``` and removed the ```GetValue<T>```. Use ```as T``` or similar to convert ```Value``` to the required type.

@@ -8,21 +8,11 @@ namespace DotDoc.LocalIpc
 {
     public class ReceivedEventArgs: EventArgs
     {
-        private readonly object _value;
-
         public ReceivedEventArgs(object value)
         {
-            _value = value;
+            Value = value;
         }
 
-        public object GetValue()
-        {
-            return _value;
-        }
-
-        public T GetValue<T>()
-        {
-            return (T)Convert.ChangeType(_value, typeof(T));
-        }
+        public object Value { get; }
     }
 }

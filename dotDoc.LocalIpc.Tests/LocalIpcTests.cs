@@ -168,7 +168,7 @@ namespace dotDoc.LocalIpc.Tests
 
             localIpcServer.Received += (s, e) =>
             {
-                receiveText = e.GetValue<string>();
+                receiveText = e.Value as string;
                 tcs.SetResult();
             };
 
@@ -202,7 +202,7 @@ namespace dotDoc.LocalIpc.Tests
 
             localIpcServer.Received += (s, e) =>
             {
-                receiveTestClass = e.GetValue<TestObject>();
+                receiveTestClass = e.Value as TestObject;
                 tcs.SetResult();
             };
 
