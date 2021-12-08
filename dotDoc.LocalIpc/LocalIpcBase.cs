@@ -119,7 +119,18 @@ namespace DotDoc.LocalIpc
         /// <param name="value">The object to send.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <returns><see cref="Task"/>.</returns>
-        public async Task SendAsync(object value, CancellationToken cancellationToken = default)
+        public Task SendAsync(object value, CancellationToken cancellationToken = default)
+        {
+            return SendAsync<object>(value, cancellationToken);
+        }
+
+        /// <summary>
+        /// Send an object.
+        /// </summary>
+        /// <param name="value">The object to send.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns><see cref="Task"/>.</returns>
+        public async Task SendAsync<T>(T value, CancellationToken cancellationToken = default)
         {
             if (!_isInitialized)
             {

@@ -2,6 +2,8 @@
 // This file is licensed to you under the MIT license.
 // See the License.txt file in the solution root for more information.
 
+// TODO write test of sending / receiving null.
+// TODO write test of SendAsync() (the version with no generic type).
 using DotDoc.LocalIpc;
 using DotDoc.LocalIpc.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
