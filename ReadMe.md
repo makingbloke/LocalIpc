@@ -5,7 +5,7 @@ Licensed using the MIT licence. See the License.txt file in the solution root fo
 
 ## Overview
 
-LocalIpc is a simple library for communicating between two objects. The objects can be contained in the same or different processes.
+LocalIpc is a simple library for communicating between two objects. The objects can be contained in the same or different processes but must reside on the same machine.
 
 ## Pre-Requisites
 
@@ -23,6 +23,8 @@ See the tests (LocalIpcTests.cs) for examples on how to create a simple client a
 
 ## Serialization
 
-See the ISerializer interface for details of the serialization methods used by LocalIpc. The default serializer uses JSON.Net. You can replace the default serializer by writing your own and passing it as a parameter into the Create methods.
+The default serializer uses System.Text.Json. You can replace the default serializer by writing your own and passing it as a parameter into the Create methods. See the ISerializer interface for details of the methods used by LocalIpc. 
 
-Any serializer must be able to add the type of the object being serialized to the serialized data being passed to the client.
+## Platform Support
+
+This library has been written and tested on Windows. There is no reason why it should not work on other .Net platforms but currently I don't have an installation of another OS to test on. When the Portability Analyzer is released for VS2022 then I will test the library with this.

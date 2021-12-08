@@ -15,3 +15,7 @@
 ### Version 1.0.2.0 - 8th December 2021 
 
 * Removed dependency on Newtonsoft Json.Net in DefaultSerializer and replaced it with System.Text.Json.
+
+### Version 1.0.2.1 - 8th December 2021 
+
+* Tidied up default serializer type handling.

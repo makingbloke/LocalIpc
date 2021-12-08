@@ -2,8 +2,6 @@
 // This file is licensed to you under the MIT license.
 // See the License.txt file in the solution root for more information.
 
-// TODO write test of sending / receiving null.
-// TODO write test of SendAsync() (the version with no generic type).
 using DotDoc.LocalIpc;
 using DotDoc.LocalIpc.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -128,7 +126,7 @@ namespace dotDoc.LocalIpc.Tests
             await localIpcServer.SendAsync(sendText).ConfigureAwait(false);
             string receiveText = await localIpcServer.ReceiveAsync<string>().ConfigureAwait(false);
 
-            Assert.AreEqual(sendText, receiveText, "Unexpected string received");
+            Assert.AreEqual(sendText, receiveText, "Unexpected object received");
         }
 
         /// <summary>
@@ -148,6 +146,25 @@ namespace dotDoc.LocalIpc.Tests
             TestObject receiveTestObject = await localIpcServer.ReceiveAsync<TestObject>().ConfigureAwait(false);
 
             Assert.AreEqual(sendTestObject, receiveTestObject, "Unexpected object received");
+        }
+
+        /// <summary>
+        /// Test sending and receiving a null.
+        /// </summary>
+        /// <returns><see cref="Task"/>.</returns>
+        [TestMethod]
+        public async Task TestSendReceiveNullAsync()
+        {
+            const object sendNull = null;
+
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
+            LaunchInternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
+            await localIpcServer.InitializeAsync().ConfigureAwait(false);
+
+            await localIpcServer.SendAsync(sendNull).ConfigureAwait(false);
+            object receiveNull = await localIpcServer.ReceiveAsync<object>().ConfigureAwait(false);
+
+            Assert.AreEqual(sendNull, receiveNull, "Unexpected object received");
         }
 
         /// <summary>
@@ -181,7 +198,7 @@ namespace dotDoc.LocalIpc.Tests
                 Assert.Fail("Timeout waiting for received event");
             }
 
-            Assert.AreEqual(sendText, receiveText, "Unexpected text received");
+            Assert.AreEqual(sendText, receiveText, "Unexpected object received");
         }
 
         /// <summary>
@@ -216,6 +233,40 @@ namespace dotDoc.LocalIpc.Tests
             }
 
             Assert.AreEqual(sendTestClass, receiveTestClass, "Unexpected object received");
+        }
+
+        /// <summary>
+        /// Test sending and receiving a string using a receive event.
+        /// </summary>
+        /// <returns><see cref="Task"/>.</returns>
+        [TestMethod]
+        public async Task TestSendReceiveEventNullAsync()
+        {
+            const int receivedEventTimeout = 2000;
+            const object sendNull = null;
+            object receiveNull = null;
+            TaskCompletionSource tcs = new();
+
+            using LocalIpcServer localIpcServer = LocalIpcServer.Create();
+            LaunchInternalClient(localIpcServer.SendPipeHandle, localIpcServer.ReceivePipeHandle);
+            await localIpcServer.InitializeAsync().ConfigureAwait(false);
+
+            localIpcServer.IsReceiveEventsEnabled = true;
+
+            localIpcServer.Received += (s, e) =>
+            {
+                receiveNull = e.Value;
+                tcs.SetResult();
+            };
+
+            await localIpcServer.SendAsync(sendNull).ConfigureAwait(false);
+
+            if (await Task.WhenAny(tcs.Task, Task.Delay(receivedEventTimeout)).ConfigureAwait(false) != tcs.Task)
+            {
+                Assert.Fail("Timeout waiting for received event");
+            }
+
+            Assert.AreEqual(sendNull, receiveNull, "Unexpected object received");
         }
 
         /// <summary>

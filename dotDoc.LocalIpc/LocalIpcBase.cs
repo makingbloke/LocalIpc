@@ -119,18 +119,7 @@ namespace DotDoc.LocalIpc
         /// <param name="value">The object to send.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <returns><see cref="Task"/>.</returns>
-        public Task SendAsync(object value, CancellationToken cancellationToken = default)
-        {
-            return SendAsync<object>(value, cancellationToken);
-        }
-
-        /// <summary>
-        /// Send an object.
-        /// </summary>
-        /// <param name="value">The object to send.</param>
-        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-        /// <returns><see cref="Task"/>.</returns>
-        public async Task SendAsync<T>(T value, CancellationToken cancellationToken = default)
+        public async Task SendAsync(object value, CancellationToken cancellationToken = default)
         {
             if (!_isInitialized)
             {
@@ -202,7 +191,7 @@ namespace DotDoc.LocalIpc
             int length = BitConverter.ToInt32(lengthBytes);
 
             byte[] valueBytes = await ReadBytesAsync(length, cancellationToken).ConfigureAwait(false);
-            T value = _serializer.Deserialize<T>(valueBytes);
+            T value = (T)_serializer.Deserialize(valueBytes);
             return value;
         }
 
