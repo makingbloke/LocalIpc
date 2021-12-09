@@ -14,7 +14,7 @@ namespace DotDoc.LocalIpc.Serializers
         /// <inheritdoc/>
         public byte[] Serialize(object value)
         {
-            Type type = value != null ? value.GetType() : typeof(object);
+            Type type = value?.GetType() ?? typeof(object);
 
             var valueWrapper = new { TypeName = type.AssemblyQualifiedName, Value = value };
             string json = JsonSerializer.Serialize(valueWrapper);
