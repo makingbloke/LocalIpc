@@ -26,16 +26,6 @@ namespace DotDoc.LocalIpc
         private bool _isReceiveEventsEnabled;
         private CancellationTokenSource _cancellationTokenSource;
 
-        /// <summary>
-        /// Event raised when object is disposed.
-        /// </summary>
-        public EventHandler Disposed;
-
-        /// <summary>
-        /// Event raised when an object is received (only raised when <see cref="IsReceiveEventsEnabled"/> is <c>true</c>).
-        /// </summary>
-        public EventHandler<ReceivedEventArgs> Received;
-
         protected LocalIpcBase(PipeStream sendPipeStream, PipeStream receivePipeStream, ISerializer serializer)
         {
             (_sendPipeStream, _receivePipeStream, _serializer) = (sendPipeStream, receivePipeStream, serializer ?? new DefaultSerializer());
@@ -62,6 +52,16 @@ namespace DotDoc.LocalIpc
             _isInitialized = true;
             return Task.CompletedTask;
         }
+
+        /// <summary>
+        /// Event raised when object is disposed.
+        /// </summary>
+        public EventHandler Disposed { set; get; }
+
+        /// <summary>
+        /// Event raised when an object is received (only raised when <see cref="IsReceiveEventsEnabled"/> is <c>true</c>).
+        /// </summary>
+        public EventHandler<ReceivedEventArgs> Received { set; get; }
 
         /// <summary>
         /// Sets a value indicating whether Receive events are raised.
