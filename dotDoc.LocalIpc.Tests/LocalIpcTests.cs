@@ -416,7 +416,7 @@ namespace dotDoc.LocalIpc.Tests
 
                 // send an receive to external client - the external client will exit after this
                 await localIpcServer.SendAsync(sendText).ConfigureAwait(false);
-                string receiveText = await localIpcServer.ReceiveAsync<string>().ConfigureAwait(false);
+                await localIpcServer.ReceiveAsync<string>().ConfigureAwait(false);
 
                 await process.WaitForExitAsync().ConfigureAwait(false);
             }

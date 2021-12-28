@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace IPCClient
 {
-    class Program
+    public static class Program
     {
         /// <summary>
         /// Local Ipc test client.
