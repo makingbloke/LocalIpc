@@ -1,18 +1,25 @@
-﻿// Copyright ©2021 Mike King.
+﻿// Copyright ©2021-2022 Mike King.
 // This file is licensed to you under the MIT license.
 // See the License.txt file in the solution root for more information.
 
-using System;
+namespace DotDoc.LocalIpc;
 
-namespace DotDoc.LocalIpc
+/// <summary>
+/// Received Event Args.
+/// </summary>
+public class ReceivedEventArgs : EventArgs
 {
-    public class ReceivedEventArgs: EventArgs
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReceivedEventArgs"/> class.
+    /// </summary>
+    /// <param name="value">The value received.</param>
+    public ReceivedEventArgs(object value)
     {
-        public ReceivedEventArgs(object value)
-        {
-            Value = value;
-        }
-
-        public object Value { get; }
+        this.Value = value;
     }
+
+    /// <summary>
+    /// Gets the value received.
+    /// </summary>
+    public object Value { get; }
 }

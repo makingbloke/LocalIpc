@@ -1,6 +1,6 @@
 # LocalIpc
 
-Copyright ©2021 Mike King.  
+Copyright ©2021-2022 Mike King.  
 Licensed using the MIT licence. See the License.txt file in the solution root for more information.  
 
 ## Overview

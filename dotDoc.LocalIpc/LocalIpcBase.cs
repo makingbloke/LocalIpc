@@ -1,238 +1,280 @@
-﻿// Copyright ©2021 Mike King.
+﻿// Copyright ©2021-2022 Mike King.
 // This file is licensed to you under the MIT license.
 // See the License.txt file in the solution root for more information.
 
 using DotDoc.LocalIpc.Exceptions;
 using DotDoc.LocalIpc.Serializers;
-using System;
-using System.IO;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipes;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace DotDoc.LocalIpc
+namespace DotDoc.LocalIpc;
+
+/// <summary>
+/// LocalIpc base class.
+/// </summary>
+public abstract class LocalIpcBase : IDisposable
 {
+    private readonly PipeStream _sendPipeStream;
+    private readonly PipeStream _receivePipeStream;
+    private readonly ISerializer _serializer;
+    private bool _isDisposed;
+    private bool _isInitialized;
+    private bool _isReceiveEventsEnabled;
+    [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "This is disposed by setting IsReceiveEventsEnabled = false in the Dispose method.")]
+    private CancellationTokenSource _cancellationTokenSource;
+
     /// <summary>
-    /// LocalIpc base class.
+    /// Initializes a new instance of the <see cref="LocalIpcBase"/> class.
     /// </summary>
-    public abstract class LocalIpcBase : IDisposable
+    /// <param name="sendPipeStream">The send <see cref="PipeStream"/>.</param>
+    /// <param name="receivePipeStream">The receive <see cref="PipeStream"/>.</param>
+    /// <param name="serializer">An optional serializer, if none is specified then <see cref="DefaultSerializer"/> is used.</param>
+    protected LocalIpcBase(PipeStream sendPipeStream, PipeStream receivePipeStream, ISerializer serializer)
     {
+        (this._sendPipeStream, this._receivePipeStream, this._serializer) = (sendPipeStream, receivePipeStream, serializer ?? new DefaultSerializer());
+    }
 
-        private bool _isDisposed;
-        private readonly PipeStream _sendPipeStream;
-        private readonly PipeStream _receivePipeStream;
-        private readonly ISerializer _serializer;
-        private bool _isInitialized;
-        private bool _isReceiveEventsEnabled;
-        private CancellationTokenSource _cancellationTokenSource;
+    /// <summary>
+    /// Finalizes an instance of the <see cref="LocalIpcBase"/> class.
+    /// </summary>
+    ~LocalIpcBase()
+    {
+        this.Dispose(false);
+    }
 
-        protected LocalIpcBase(PipeStream sendPipeStream, PipeStream receivePipeStream, ISerializer serializer)
+    /// <summary>
+    /// Gets or sets the event raised when object is disposed.
+    /// </summary>
+    public EventHandler Disposed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event raised when an object is received (only raised when <see cref="IsReceiveEventsEnabled"/> is <see langword="true"/>).
+    /// </summary>
+    public EventHandler<ReceivedEventArgs> Received { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Receive events are raised.
+    /// </summary>
+    public bool IsReceiveEventsEnabled
+    {
+        get
         {
-            (_sendPipeStream, _receivePipeStream, _serializer) = (sendPipeStream, receivePipeStream, serializer ?? new DefaultSerializer());
+            return this._isReceiveEventsEnabled;
         }
 
-        ~LocalIpcBase()
+        set
         {
-            Dispose(false);
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        public virtual Task InitializeAsync(CancellationToken cancellationToken = default)
-        {
-            if (_isInitialized)
-            {
-                throw new LocalIpcAlreadyInitializedException();
-            }
-
-            _isInitialized = true;
-            return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Event raised when object is disposed.
-        /// </summary>
-        public EventHandler Disposed { set; get; }
-
-        /// <summary>
-        /// Event raised when an object is received (only raised when <see cref="IsReceiveEventsEnabled"/> is <c>true</c>).
-        /// </summary>
-        public EventHandler<ReceivedEventArgs> Received { set; get; }
-
-        /// <summary>
-        /// Sets a value indicating whether Receive events are raised.
-        /// </summary>
-        public bool IsReceiveEventsEnabled
-        {
-            set
-            {
-                if (!_isInitialized)
-                {
-                    throw new LocalIpcNotInitializedException();
-                }
-
-                switch (value)
-                {
-                    case true when !_isReceiveEventsEnabled:
-                        _isReceiveEventsEnabled = true;
-
-                        _cancellationTokenSource = new CancellationTokenSource();
-                        Task.Run(async () =>
-                        {
-                            while (true)
-                            {
-                                try
-                                {
-                                    object value = await ReceiveObjectAsync<object>(_cancellationTokenSource.Token).ConfigureAwait(false);
-                                    Received?.Invoke(this, new ReceivedEventArgs(value));
-                                }
-                                catch (TaskCanceledException)
-                                {
-                                    break;
-                                }
-                            }
-                        });
-                        break;
-
-                    case false when _isReceiveEventsEnabled:
-                        _isReceiveEventsEnabled = false;
-
-                        _cancellationTokenSource.Cancel();
-                        _cancellationTokenSource.Dispose();
-                        break;
-                }
-            }
-
-            get
-            {
-                return _isReceiveEventsEnabled;
-            }
-        }
-
-        /// <summary>
-        /// Send an object.
-        /// </summary>
-        /// <param name="value">The object to send.</param>
-        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-        /// <returns><see cref="Task"/>.</returns>
-        public async Task SendAsync(object value, CancellationToken cancellationToken = default)
-        {
-            if (!_isInitialized)
+            if (!this._isInitialized)
             {
                 throw new LocalIpcNotInitializedException();
             }
 
-            byte[] valueBytes = _serializer.Serialize(value);
-            byte[] lengthBytes = BitConverter.GetBytes(valueBytes.Length);
-
-            await WriteBytesAsync(lengthBytes, cancellationToken).ConfigureAwait(false);
-            await WriteBytesAsync(valueBytes, cancellationToken).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Receive an object.
-        /// </summary>
-        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-        /// <returns><see cref="Task"/>.</returns>
-        public Task<object> ReceiveAsync(CancellationToken cancellationToken = default)
-        {
-            return ReceiveAsync<object>(cancellationToken);
-        }
-
-        /// <summary>
-        /// Receive an object.
-        /// </summary>
-        /// <typeparam name="T">The type of object to receive.</typeparam>
-        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-        /// <returns>A instance of <see cref="{T}"/>.</returns>
-        public Task<T> ReceiveAsync<T>(CancellationToken cancellationToken = default)        
-        {
-            if (!_isInitialized)
+            if (value != this._isReceiveEventsEnabled)
             {
-                throw new LocalIpcNotInitializedException();
-            }
+                this._isReceiveEventsEnabled = value;
 
-            if (IsReceiveEventsEnabled)
-            {
-                throw new InvalidOperationException("Cannot manually receive an object while Receive events are enabled.");
-            }
-
-            return ReceiveObjectAsync<T>(cancellationToken);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!_isDisposed)
-            {
-                _isDisposed = true;
-
-                if (disposing)
+                if (this._isReceiveEventsEnabled)
                 {
-                    if (_isInitialized)
+                    this._cancellationTokenSource = new CancellationTokenSource();
+                    Task.Run(async () =>
                     {
-                        IsReceiveEventsEnabled = false;
-                    }
+                        while (true)
+                        {
+                            try
+                            {
+                                object value = await this.ReceiveObjectAsync<object>(this._cancellationTokenSource.Token).ConfigureAwait(false);
+                                this.Received?.Invoke(this, new ReceivedEventArgs(value));
+                            }
+                            catch (TaskCanceledException)
+                            {
+                                break;
+                            }
+                        }
+                    });
+                }
+                else
+                {
+                    this._isReceiveEventsEnabled = false;
 
-                    _sendPipeStream.Dispose();
-                    _receivePipeStream.Dispose();
-
-                    Disposed?.Invoke(this, EventArgs.Empty);
+                    this._cancellationTokenSource.Cancel();
+                    this._cancellationTokenSource.Dispose();
                 }
             }
         }
+    }
 
-        private async Task<T> ReceiveObjectAsync<T>(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Release resources used by this class.
+    /// </summary>
+    public void Dispose()
+    {
+        this.Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Initialize method.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see cref="Task"/>.</returns>
+    public virtual Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        if (this._isInitialized)
         {
-            byte[] lengthBytes = await ReadBytesAsync(sizeof(int), cancellationToken).ConfigureAwait(false);
-            int length = BitConverter.ToInt32(lengthBytes);
-
-            byte[] valueBytes = await ReadBytesAsync(length, cancellationToken).ConfigureAwait(false);
-            T value = (T)_serializer.Deserialize(valueBytes);
-            return value;
+            throw new LocalIpcAlreadyInitializedException();
         }
 
-        private async Task<byte[]> ReadBytesAsync(int length, CancellationToken cancellationToken)
+        this._isInitialized = true;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Send an object.
+    /// </summary>
+    /// <param name="value">The object to send.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see cref="Task"/>.</returns>
+    public async Task SendAsync(object value, CancellationToken cancellationToken = default)
+    {
+        if (!this._isInitialized)
         {
-            try
+            throw new LocalIpcNotInitializedException();
+        }
+
+        byte[] valueBytes = this._serializer.Serialize(value);
+        byte[] lengthBytes = BitConverter.GetBytes(valueBytes.Length);
+
+        await this.SendBytesAsync(lengthBytes, cancellationToken).ConfigureAwait(false);
+        await this.SendBytesAsync(valueBytes, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Receive an object.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see cref="Task"/>.</returns>
+    public Task<object> ReceiveAsync(CancellationToken cancellationToken = default)
+    {
+        return this.ReceiveAsync<object>(cancellationToken);
+    }
+
+    /// <summary>
+    /// Receive an object.
+    /// </summary>
+    /// <typeparam name="T">The type of object to receive.</typeparam>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>An instance of <typeparamref name="T"/>.</returns>
+    public Task<T> ReceiveAsync<T>(CancellationToken cancellationToken = default)
+    {
+        if (!this._isInitialized)
+        {
+            throw new LocalIpcNotInitializedException();
+        }
+
+        if (this.IsReceiveEventsEnabled)
+        {
+            throw new InvalidOperationException("Cannot manually receive an object while Receive events are enabled.");
+        }
+
+        return this.ReceiveObjectAsync<T>(cancellationToken);
+    }
+
+    /// <summary>
+    /// Releases the unmanaged resources used by this
+    /// class and optionally releases the managed resources.
+    /// </summary>
+    /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release only unmanaged resources.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!this._isDisposed)
+        {
+            this._isDisposed = true;
+
+            if (disposing)
             {
-                byte[] bytes = new byte[length];
-                int bytesRead = await _receivePipeStream.ReadAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);
-
-                if (bytesRead == 0)
+                if (this._isInitialized)
                 {
-                    throw new PipeBrokenException();
+                    this.IsReceiveEventsEnabled = false;
                 }
 
-                if (bytesRead < bytes.Length)
-                {
-                    throw new EndOfStreamException("Unexpected end of stream on receive pipe.");
-                }
+                this._sendPipeStream.Dispose();
+                this._receivePipeStream.Dispose();
 
-                return bytes;
+                this.Disposed?.Invoke(this, EventArgs.Empty);
             }
-            catch (Exception e) when (IsPipeBrokenException(e))
+        }
+    }
+
+    /// <summary>
+    /// Test if an exception is a broken pipe exception.
+    /// </summary>
+    /// <param name="e">The exception to test.</param>
+    /// <returns><see langword="true"/> if the exception is a broken pipe exception else <see langword="false"/>.</returns>
+    private static bool IsPipeBrokenException(Exception e)
+        => e is IOException && e.Message == "Pipe is broken.";
+
+    /// <summary>
+    /// Receive and deserialize an object.
+    /// </summary>
+    /// <typeparam name="T">The type of object to receive.</typeparam>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>An instance of <typeparamref name="T"/>.</returns>
+    private async Task<T> ReceiveObjectAsync<T>(CancellationToken cancellationToken = default)
+    {
+        byte[] lengthBytes = await this.ReceiveBytesAsync(sizeof(int), cancellationToken).ConfigureAwait(false);
+        int length = BitConverter.ToInt32(lengthBytes);
+
+        byte[] valueBytes = await this.ReceiveBytesAsync(length, cancellationToken).ConfigureAwait(false);
+        T value = (T)this._serializer.Deserialize(valueBytes);
+        return value;
+    }
+
+    /// <summary>
+    /// Receive a fixed length byte array.
+    /// </summary>
+    /// <param name="length">The number of bytes to receive.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A byte array containing the data read.</returns>
+    private async Task<byte[]> ReceiveBytesAsync(int length, CancellationToken cancellationToken)
+    {
+        try
+        {
+            byte[] bytes = new byte[length];
+            int bytesRead = await this._receivePipeStream.ReadAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);
+
+            if (bytesRead == 0)
             {
                 throw new PipeBrokenException();
             }
-        }
 
-        private async Task WriteBytesAsync(byte[] bytes, CancellationToken cancellationToken)
+            if (bytesRead < bytes.Length)
+            {
+                throw new EndOfStreamException("Unexpected end of stream on receive pipe.");
+            }
+
+            return bytes;
+        }
+        catch (Exception e) when (IsPipeBrokenException(e))
         {
-            try
-            {
-                await _sendPipeStream.WriteAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);            
-            }
-            catch (Exception e) when (IsPipeBrokenException(e))
-            {
-                throw new PipeBrokenException();
-            }
+            throw new PipeBrokenException();
         }
+    }
 
-        private static bool IsPipeBrokenException(Exception e)
-            => e is IOException && e.Message == "Pipe is broken.";
+    /// <summary>
+    /// Send a fixed length byte array.
+    /// </summary>
+    /// <param name="bytes">The byte array to send.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see cref="Task"/>.</returns>
+    private async Task SendBytesAsync(byte[] bytes, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await this._sendPipeStream.WriteAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception e) when (IsPipeBrokenException(e))
+        {
+            throw new PipeBrokenException();
+        }
     }
 }

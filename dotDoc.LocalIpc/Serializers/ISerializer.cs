@@ -1,30 +1,25 @@
-﻿// Copyright ©2021 Mike King.
+﻿// Copyright ©2021-2022 Mike King.
 // This file is licensed to you under the MIT license.
 // See the License.txt file in the solution root for more information.
 
-using System.Threading;
-using System.Threading.Tasks;
+namespace DotDoc.LocalIpc.Serializers;
 
-namespace DotDoc.LocalIpc.Serializers
+/// <summary>
+/// Local Ipc Serializer Interface.
+/// </summary>
+public interface ISerializer
 {
     /// <summary>
-    /// Local Ipc Serializer Interface.
+    /// Serialize the specified object into a byte array.
     /// </summary>
-    public interface ISerializer
-    {
-        /// <summary>
-        /// Serialize the specified object into a byte array.
-        /// </summary>
-        /// <param name="value">The object to serialize.</param>
-        /// <returns>A byte array containing the serialized object.</returns>
-        public byte[] Serialize(object value);
+    /// <param name="value">The object to serialize.</param>
+    /// <returns>A byte array containing the serialized object.</returns>
+    public byte[] Serialize(object value);
 
-        /// <summary>
-        /// Deserialize the specified byte array into an object.
-        /// </summary>
-        /// <typeparam name="T">The type of object to deserialize.</typeparam>
-        /// <param name="bytes">The byte array to deserialize.</param>
-        /// <returns>A instance of <see cref="{T}"/>.</returns>
-        public object Deserialize(byte[] bytes);
-    }
+    /// <summary>
+    /// Deserialize the specified byte array into an object.
+    /// </summary>
+    /// <param name="bytes">The byte array to deserialize.</param>
+    /// <returns>A <see cref="object"/> containing the deserialized item.</returns>
+    public object Deserialize(byte[] bytes);
 }
