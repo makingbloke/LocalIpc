@@ -14,6 +14,7 @@ namespace DotDoc.LocalIpc;
 /// </summary>
 public abstract class LocalIpcBase : IDisposable
 {
+    private const string _ioExceptionPipeBrokenMessage = "Pipe is broken.";
     private readonly PipeStream _sendPipeStream;
     private readonly PipeStream _receivePipeStream;
     private readonly ISerializer _serializer;
@@ -98,6 +99,7 @@ public abstract class LocalIpcBase : IDisposable
 
                     this._cancellationTokenSource.Cancel();
                     this._cancellationTokenSource.Dispose();
+                    this._cancellationTokenSource = null;
                 }
             }
         }
@@ -206,14 +208,6 @@ public abstract class LocalIpcBase : IDisposable
     }
 
     /// <summary>
-    /// Test if an exception is a broken pipe exception.
-    /// </summary>
-    /// <param name="e">The exception to test.</param>
-    /// <returns><see langword="true"/> if the exception is a broken pipe exception else <see langword="false"/>.</returns>
-    private static bool IsPipeBrokenException(Exception e)
-        => e is IOException && e.Message == "Pipe is broken.";
-
-    /// <summary>
     /// Receive and deserialize an object.
     /// </summary>
     /// <typeparam name="T">The type of object to receive.</typeparam>
@@ -254,7 +248,7 @@ public abstract class LocalIpcBase : IDisposable
 
             return bytes;
         }
-        catch (Exception e) when (IsPipeBrokenException(e))
+        catch (IOException e) when (e.Message == _ioExceptionPipeBrokenMessage)
         {
             throw new PipeBrokenException();
         }
@@ -272,7 +266,7 @@ public abstract class LocalIpcBase : IDisposable
         {
             await this._sendPipeStream.WriteAsync(bytes.AsMemory(0, bytes.Length), cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception e) when (IsPipeBrokenException(e))
+        catch (IOException e) when (e.Message == _ioExceptionPipeBrokenMessage)
         {
             throw new PipeBrokenException();
         }
