@@ -37,7 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\dotDoc.LocalIpc\dotDoc.LocalIpc.csproj" />
+    <ProjectReference Include="..\dotDoc.LocalIpc\DotDoc.LocalIpc.csproj" />
   </ItemGroup>
 
 </Project>
