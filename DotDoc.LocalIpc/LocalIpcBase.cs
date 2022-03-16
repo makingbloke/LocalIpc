@@ -32,7 +32,9 @@ public abstract class LocalIpcBase : IDisposable
     /// <param name="serializer">An optional serializer, if none is specified then <see cref="DefaultSerializer"/> is used.</param>
     protected LocalIpcBase(PipeStream sendPipeStream, PipeStream receivePipeStream, ISerializer serializer)
     {
-        (this._sendPipeStream, this._receivePipeStream, this._serializer) = (sendPipeStream, receivePipeStream, serializer ?? new DefaultSerializer());
+        this._sendPipeStream = sendPipeStream;
+        this._receivePipeStream = receivePipeStream;
+        this._serializer = serializer ?? new DefaultSerializer();
     }
 
     /// <summary>
@@ -116,18 +118,31 @@ public abstract class LocalIpcBase : IDisposable
 
     /// <summary>
     /// Initialize method.
+    /// This must be called after the class is created.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns><see cref="Task"/>.</returns>
-    public virtual Task InitializeAsync(CancellationToken cancellationToken = default)
+    public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         if (this._isInitialized)
         {
             throw new LocalIpcAlreadyInitializedException();
         }
 
+        // Set the initialized flag to true first so DoInitialize can call send / receive methods.
+        // However, should anything go wrong then set it back to false so nothing else can be done.
         this._isInitialized = true;
-        return Task.CompletedTask;
+
+        try
+        {
+            await this.DoInitializeAsync(cancellationToken);
+        }
+        catch
+        {
+            this._isInitialized = false;
+            throw;
+        }
+
     }
 
     /// <summary>
@@ -180,6 +195,13 @@ public abstract class LocalIpcBase : IDisposable
 
         return this.ReceiveObjectAsync<T>(cancellationToken);
     }
+
+    /// <summary>
+    /// Perform class initialization.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see cref="Task"/>.</returns>
+    protected abstract Task DoInitializeAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Releases the unmanaged resources used by this

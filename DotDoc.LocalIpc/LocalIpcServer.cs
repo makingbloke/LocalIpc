@@ -53,16 +53,9 @@ public class LocalIpcServer : LocalIpcBase
         return new LocalIpcServer(sendPipe, receivePipe, serializer);
     }
 
-    /// <summary>
-    /// Initialize method.
-    /// This must be called after the class has been created and the client has been launched.
-    /// </summary>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns><see cref="Task"/>.</returns>
-    public override async Task InitializeAsync(CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    protected override async Task DoInitializeAsync(CancellationToken cancellationToken)
     {
-        await base.InitializeAsync(cancellationToken).ConfigureAwait(false);
-
         // Wait for the client to send back its process id.
         // If it is running on a different process to the server then dispose of the local copy of the client handles
         // (If the handles are not disposed then the server cannot track if the client has broken the pipe unexpectedly).

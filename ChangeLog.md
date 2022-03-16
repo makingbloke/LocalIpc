@@ -1,7 +1,11 @@
+### Version 1.0.2.3 - 16th March 2022
+
+* Tidied up initialization code.
+
 ### Version 1.0.2.2 - 2nd March 2022
 
 * Updated Nuget packages for test project.
-* The year on the copyright messages.
+* Updated the year on the copyright messages.
 * Added source analyzers and tidied up source code (including refactoring ```namespace``` statements to use the new style).
 
 ### Version 1.0.2.1 - 8th December 2021 
@@ -16,7 +20,7 @@
 
 * Tidied up the broken pipe exception trapping code.
 * Updated Test Adapter and Test Framework Nuget packages.
-* Simplified the ```ReceivedEventArgs``` class. Replaced the ```GetValue``` method with a property ```Value``` and removed the ```GetValue<T>```. Use ```as T``` or similar to convert ```Value``` to the required type.
+* Simplified the ```ReceivedEventArgs``` class. Replaced the ```GetValue``` method with a property ```Value``` and removed the ```GetValue<T>```. Use ```as T``` or similar to cast ```Value``` to the required type.
 
 ### Version 1.0.1.0 - 1st November 2021 
 
