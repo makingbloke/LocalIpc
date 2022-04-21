@@ -1,3 +1,9 @@
+### Version 1.0.2.4 - 21st April 2022
+
+* Updated Nuget packages for test project.
+* Added source analyzers.
+* Changed project from using <Version> to using <VersionPrefix> for compatibility with new internal packaging script.
+
 ### Version 1.0.2.3 - 16th March 2022
 
 * Tidied up initialization code.
