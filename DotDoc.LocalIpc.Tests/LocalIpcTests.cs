@@ -6,7 +6,6 @@ using DotDoc.LocalIpc;
 using DotDoc.LocalIpc.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 
 namespace dotDoc.LocalIpc.Tests;
 
@@ -17,10 +16,9 @@ namespace dotDoc.LocalIpc.Tests;
 public class LocalIpcTests
 {
     /// <summary>
-    /// Test object used to send &amp; receive.
+    /// Test object used to send and receive.
     /// </summary>
-    [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1313:Parameter names should begin with lower-case letter", Justification = "StyleCop does not support first character in record parameter should be ucase rule.")]
-    private record TestObject(string TextValue, int IntValue);
+    private record TestObject(string textValue, int intValue);
 
     /// <summary>
     /// Test that an exception is thrown if an attempt is made to initialize Local Ipc twice.

@@ -1,3 +1,7 @@
+### Version 1.0.2.5 - 24th September 2022
+
+* Updated Nuget packages for source analyzers and test project.
+
 ### Version 1.0.2.4 - 21st April 2022
 
 * Updated Nuget packages for test project.
